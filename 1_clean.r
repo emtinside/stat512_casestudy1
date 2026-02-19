@@ -31,17 +31,32 @@ sprintf("Categorical Variables: %s", variables_crime)
 ```
 
 ```{r clean dataset}
-# Compute average median income by state (Demographics dataset))
+# Compute average median income by state (Demographics dataset)
 income_by_state <- df_demographics |>
   group_by(state) |>
   summarise(state_median_income = mean(medIncome, na.rm = TRUE))
 head(income_by_state)
+
+# Compute average percent of population under the poverty line (Crimes dataset)
+per_poverty_by_state <- df_crimes |>
+  group_by(state) |>
+  summarise(state_percent_poverty = mean(per_poverty, na.rm = TRUE))
 
 # Compute the average crime rate by state (Crimes dataset)
 crime_rate_by_state <- df_crimes |>
   group_by(state) |>
   summarise(state_crime_rate = mean(crime_rate, na.rm = TRUE))
 head(crime_rate_by_state)
+
+# Compute the average crimes per population by state (Crimes dataset)
+crimes_capita_by_state <- df_crimes |>
+  group_by(state) |>
+  summarise(crimes_capita = mean(total_crimes_per_population, na.rm = TRUE))
+
+# Compute the average crime rate by poverty tier (Crimes dataset)
+crime_rate_by_poverty_tier <- df_crimes |>
+  group_by(poverty_tier) |>
+  summarise(tier_crime_rate = mean(crime_rate, na.rm = TRUE))
 ```
 
 ```{r compute descriptive statistics + correlations}
