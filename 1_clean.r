@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 ```
 '''
-Research question: What is the relationship between poverty and crime rates? 
+Research question: 
 '''
 ```{r load dataset}
 # Load demographics dataset
