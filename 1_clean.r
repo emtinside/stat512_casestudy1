@@ -10,10 +10,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ``` {r load libraries}
 library(dplyr)
-library(ggplot2)
 ```
 '''
-Research question: 
+Research question: Which factor contributes more to crime rates
 '''
 ```{r load dataset}
 # Load demographics dataset
@@ -33,9 +32,24 @@ sprintf("Categorical Variables: %s", variables_crime)
 
 ```{r clean dataset}
 # Compute average percent of population under the poverty line (Crimes dataset)
-per_poverty_by_state <- df_crimes |>
+per_poverty_by_state <- df_crimes[PctPopUnderPov] |>
   group_by(state) |>
   summarise(state_percent_poverty = mean(PctPopUnderPov, na.rm = TRUE))
+
+# Compute the average unemployment rate by state (Demographics dataset)
+unemployment_by_state <- df_demographics |>
+  group_by(state) |>
+  summarise(state_unemployment  = mean(PctUnemployed, na.rm = TRUE))
+
+# Compute the average median income by state (Demographics dataset)
+median_income_by_state <- df_demographics |>
+  group_by(state) |>
+  summarise(state_median_income = mean(medIncome, na.rm = TRUE))
+
+# Compute the average percent of population with less than high school education by state (Demographics dataset)
+hs_incomplete_by_state <- df_demographics |>
+  group_by(state) |>
+  summarise(state_hs_incomplete = mean(PctNotHSGrad, na.rm = TRUE))
 
 # Compute the average crime rate by state (Crimes dataset)
 crime_rate_by_state <- df_crimes |>
@@ -43,7 +57,12 @@ crime_rate_by_state <- df_crimes |>
   summarise(state_crime_rate = mean(totalCrimesPerPop, na.rm = TRUE))
 ```
 
+'''
+H0: Poverty contributes more to crime rates than unemployment, median income, and education level.
+H1: All roughly contribute equally to crime rates
+'''
 ```{r compute descriptive statistics + correlations}
+
 ```
 
 ```{r create plots}
