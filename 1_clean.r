@@ -16,14 +16,14 @@ Research question: Which factor contributes more to crime rates
 '''
 ```{r load dataset}
 # Load demographics dataset
-demographics <- read.csv("crime_data_with_poverty_tiers.csv")
+demographics <- read.csv("./raw_data.csv")
 df_demographics <- data.frame(demographics)
 sprintf("Number of Observations (Demographics): %d", nrow(df_demographics))
 variables_demographics <- paste(names(df_demographics), collapse = ", ")
 sprintf("Categorical Variables: %s", variables_demographics)
 
 # Load crime dataset
-crimes <- read.csv("crime_data_with_poverty_tiers.csv")
+crimes <- read.csv("./crime_data_with_poverty_tiers.csv")
 df_crimes <- data.frame(crimes)
 sprintf("Number of Observations (Crimes): %d", nrow(crimes))
 variables_crime <- paste(names(df_demographics), collapse = ", ")
@@ -35,31 +35,45 @@ sprintf("Categorical Variables: %s", variables_crime)
 per_poverty_by_state <- df_crimes |>
   filter(!is.na(PctPopUnderPov)) |>
   group_by(state) |>
-  summarise(state_percent_poverty = mean(PctPopUnderPov))
+  summarise(percent_poverty = mean(PctPopUnderPov))
 
 # Compute the average unemployment rate by state (Demographics dataset)
 unemployment_by_state <- df_demographics |>
   filter(!is.na(PctUnemployed)) |>
   group_by(state) |>
-  summarise(state_unemployment  = mean(PctUnemployed, na.rm = TRUE))
+  summarise(unemployment  = mean(PctUnemployed, na.rm = TRUE))
 
 # Compute the average median income by state (Demographics dataset)
 median_income_by_state <- df_demographics |>
   filter(!is.na(medIncome)) |>
   group_by(state) |>
-  summarise(state_median_income = mean(medIncome, na.rm = TRUE))
+  summarise(median_income = mean(medIncome, na.rm = TRUE))
 
-# # Compute the average percent of population with less than high school education by state (Demographics dataset)
+# Compute % population with less than hs education by state (Demographics dataset)
 hs_incomplete_by_state <- df_demographics |>
   filter(!is.na(PctNotHSGrad)) |>
   group_by(state) |>
-  summarise(state_hs_incomplete = mean(PctNotHSGrad, na.rm = TRUE))
+  summarise(hs_incomplete = mean(PctNotHSGrad, na.rm = TRUE))
 
 # Compute the average crime rate by state (Crimes dataset)
 crime_rate_by_state <- df_crimes |>
   filter(!is.na(totalCrimesPerPop)) |>
   group_by(state) |>
-  summarise(state_crime_rate = mean(totalCrimesPerPop, na.rm = TRUE))
+  summarise(crime_rate = mean(totalCrimesPerPop, na.rm = TRUE))
+
+# Merge all state summaries into one dataframe
+dataset <- per_poverty_by_state |>
+  left_join(unemployment_by_state, by = "state") |>
+  left_join(median_income_by_state, by = "state") |>
+  left_join(hs_incomplete_by_state, by = "state") |>
+  left_join(crime_rate_by_state, by = "state")
+
+poverty <- dataset$percent_poverty
+unemployment <- dataset$unemployment
+hs_incomplete <- dataset$hs_incomplete
+median_income <- dataset$median_income
+crime_rate <- dataset$crime_rate
+
 ```
 
 '''
@@ -67,29 +81,75 @@ H0: Poverty contributes more to crime rates than unemployment, median income, an
 H1: All roughly contribute equally to crime rates
 '''
 ```{r compute descriptive statistics + correlations}
-y <- demographics$ViolentCrimesPerPop
- 
-x1 <- demographics$medIncome        # median income
-x2 <- demographics$PctUnemployed    # unemployment rate
-x3 <- demographics$PctPopUnderPov   # poverty rate
-x4 <- demographics$PctNotHSGrad     # high school incomplete (% not HS grad)
- 
+# By state statistics: see if there is variability among states 
+# (Breush-Pagan: Heteroscedacity in the future)
+summary(median_income_by_state)
+summary(unemployment_by_state)
+summary(per_poverty_by_state)
+summary(hs_incomplete_by_state)
 
-png("crime_vs_predictors.png", width=1200, height=900)
-par(mfrow=c(2,2), mar=c(4,4,2,1))
-plot(x1, y, xlab="medIncome", ylab="ViolentCrimesPerPop", main="Crime vs Median Income")
-plot(x2, y, xlab="PctUnemployed", ylab="ViolentCrimesPerPop", main="Crime vs Unemployment")
-plot(x3, y, xlab="PctPopUnderPov", ylab="ViolentCrimesPerPop", main="Crime vs Poverty Rate")
-plot(x4, y, xlab="PctNotHSGrad", ylab="ViolentCrimesPerPop", main="Crime vs High School Incomplete")
+# Correlation Coefficients
+cor(dataset[, -1], method = "pearson", use = "complete.obs")
+cor.test(percent_poverty, crime_rate, method = "pearson")
+cor.test(unemployment, crime_rate, method = "pearson")
+cor.test(hs_incomplete, crime_rate, method = "pearson")
+cor.test(median_income, crime_rate, method = "pearson")
+```
+
+```{r create scatter plots}
+# Scatter plots that represent the crime rate against different factors
+png("crime_scatterplots.png", width = 800, height = 800)
+par(mfrow = c(2, 2))
+plot(poverty, crime_rate, main = "Poverty vs Crime Rate",
+     xlab = "Poverty Rate", ylab = "Crime Rate", pch = 16)
+abline(lm(crime_rate ~ poverty, data = dataset), col = "blue")
+
+plot(unemployment, crime_rate, main = "Unemployment vs Crime Rate",
+     xlab = "Unemployment %", ylab = "Crime Rate", pch = 16)
+abline(lm(crime_rate ~ unemployment, data = dataset), col = "blue")
+
+plot(hs_incomplete, crime_rate, main = "% of Pop w/HS Incomplete vs Crime Rate",
+     xlab = "% Unfinished HS", ylab = "Crime Rate", pch = 16)
+abline(lm(crime_rate ~ hs_incomplete, data = dataset), col = "blue")
+
+plot(median_income, crime_rate, main = "Median Income vs Crime Rate",
+     xlab = "Median Income", ylab = "Crime Rate", pch = 16)
+abline(lm(crime_rate ~ median_income, data = dataset), col = "blue")
+par(mfrow = c(1, 1))  
 dev.off()
- 
- # Remove missing values pairwise
-cor.test(x1, y, use="complete.obs")   # Median income vs Crime
-cor.test(x2, y, use="complete.obs")   # Unemployment vs Crime
-cor.test(x3, y, use="complete.obs")   # Poverty vs Crime
-cor.test(x4, y, use="complete.obs")   # HS Incomplete vs Crime
-
 ```
 
-```{r create plots}
+```{r create scatter plots}
+# Make SLR models for each
+model_poverty <- lm(crime_rate ~ percent_poverty, data = dataset)
+model_unemployment <- lm(crime_rate ~ unemployment, data = dataset)
+model_income <- lm(crime_rate ~ median_income, data = dataset)
+model_hs <- lm(crime_rate ~ hs_incomplete, data = dataset)
+
+models <- list(
+  poverty = model_poverty,
+  unemployment = model_unemployment,
+  income = model_income,
+  hs = model_hs
+)
+
+# Then plot all residual plots
+for (name in names(models)) {
+  png(paste0("residuals_", name, ".png"), width = 800, height = 800)
+  par(mfrow = c(2, 2))
+  plot(models[[name]], main = name)
+  par(mfrow = c(1, 1))
+  dev.off()
+}
+
+# Multiple Linear Regression
+mlr <- lm(crime_rate ~ percent_poverty + unemployment + median_income + hs_incomplete, data = dataset)
+
+# Generate all 4 diagnostic plots in a 2x2 grid
+png("MLR residuals.png")
+par(mfrow = c(2, 2))
+plot(mlr)
+par(mfrow = c(1, 1))
+dev.off()
 ```
+
