@@ -12,7 +12,13 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 ```
 '''
-Research question: Which factor contributes more to crime rates
+Research question: Which factor provides the most weight in predicting crime rates?
+X1: % population under the poverty line
+X2: unemployment rate
+X3: median income 
+X4: % population with less than high school education
+
+Y: crime rate (per capita) 
 '''
 ```{r load dataset}
 # Load demographics dataset
@@ -31,31 +37,31 @@ sprintf("Categorical Variables: %s", variables_crime)
 ```
 
 ```{r clean dataset}
-# Compute average percent of population under the poverty line (Crimes dataset)
+# Compute average percent of population under the poverty line (Crimes)
 per_poverty_by_state <- df_crimes |>
   filter(!is.na(PctPopUnderPov)) |>
   group_by(state) |>
   summarise(percent_poverty = mean(PctPopUnderPov))
 
-# Compute the average unemployment rate by state (Demographics dataset)
+# Compute the average unemployment rate by state (Demographics)
 unemployment_by_state <- df_demographics |>
   filter(!is.na(PctUnemployed)) |>
   group_by(state) |>
   summarise(unemployment  = mean(PctUnemployed, na.rm = TRUE))
 
-# Compute the average median income by state (Demographics dataset)
+# Compute the average median income by state (Demographics)
 median_income_by_state <- df_demographics |>
   filter(!is.na(medIncome)) |>
   group_by(state) |>
   summarise(median_income = mean(medIncome, na.rm = TRUE))
 
-# Compute % population with less than hs education by state (Demographics dataset)
+# Compute % population with less than hs education by state (Demographics)
 hs_incomplete_by_state <- df_demographics |>
   filter(!is.na(PctNotHSGrad)) |>
   group_by(state) |>
   summarise(hs_incomplete = mean(PctNotHSGrad, na.rm = TRUE))
 
-# Compute the average crime rate by state (Crimes dataset)
+# Compute the average crime rate by state (Crimes)
 crime_rate_by_state <- df_crimes |>
   filter(!is.na(totalCrimesPerPop)) |>
   group_by(state) |>
@@ -77,8 +83,8 @@ crime_rate <- dataset$crime_rate
 ```
 
 '''
-H0: Poverty contributes more to crime rates than unemployment, median income, and education level.
-H1: All roughly contribute equally to crime rates
+H0: All roughly contribute equally to crime rates (beta1 = beta2 = beta3 = beta4)
+H1: One factor contributes more than the others to crime rate
 '''
 ```{r compute descriptive statistics + correlations}
 # By state statistics: see if there is variability among states 
@@ -115,11 +121,11 @@ abline(lm(crime_rate ~ hs_incomplete, data = dataset), col = "blue")
 plot(median_income, crime_rate, main = "Median Income vs Crime Rate",
      xlab = "Median Income", ylab = "Crime Rate", pch = 16)
 abline(lm(crime_rate ~ median_income, data = dataset), col = "blue")
-par(mfrow = c(1, 1))  
+par(mfrow = c(1, 1))
 dev.off()
 ```
 
-```{r create scatter plots}
+```{r create models and plots}
 # Make SLR models for each
 model_poverty <- lm(crime_rate ~ percent_poverty, data = dataset)
 model_unemployment <- lm(crime_rate ~ unemployment, data = dataset)
@@ -141,7 +147,6 @@ for (name in names(models)) {
   par(mfrow = c(1, 1))
   dev.off()
 }
-
 # Multiple Linear Regression
 mlr <- lm(crime_rate ~ percent_poverty + unemployment + median_income + hs_incomplete, data = dataset)
 
